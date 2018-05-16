@@ -54,18 +54,150 @@ cx_Oracle
 *  直接利用ORM操作数据库（常规用法）
 
 ### 3.1 连接池执行原生SQL
+
+利用SQLAlchemy(部份功能)连接池功能结合原生SQL可以操作数据库，方法还有很多种，如：
+
+eg1(不常用):
+```
+cur = engine.execute("select * from t1")
+result = cur.fetchall()
 ```
 
+eg2(不常用)
+```
+conn = engine.contextual_connect()
+    with conn:
+        cur = conn.execute("select * from t1")
+        result = cur.fetchall()
+```
+
+这里只列出一种来理解学习
+
+```
+import threading
+import pymysql
+from sqlalchemy import create_engine
+
+engine = create_engine(
+    'mysql+pymysql://root:qq11@192.168.1.6:3306/db1?charset=utf8',
+    max_overflow=1,
+    pool_size=2,
+    pool_timeout=30,
+    pool_recycle=-1,
+)
+
+def task(arg):
+    conn = engine.raw_connection()
+    cur = conn.cursor(pymysql.cursors.DictCursor)  # pymysql.cursors.DictCursor表示返回字典形式，默认元组形式
+    cur.execute('select * from userinfo')
+    # cur.execute('select sleep(2)')
+    result = cur.fetchall()
+    cur.close()
+    conn.close()
+    print(result)
+
+for i in range(10):
+    t = threading.Thread(target=task,args=(i,))
+    t.start()
 ```
 
 ### 3.2 ORM执行原生SQL
 
 ```
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint, Index
+from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy import create_engine
+from sqlalchemy.sql import text
+from sqlalchemy.engine.result import ResultProxy
+from models import UserInfo  # 前提是models.py定义了UserInfo表，models.py文件中导入UserInfo表
 
+engine = create_engine('mysql+pymysql://root:qdf@192.168.1.6:3306/db1?charset=utf8', max_overflow=0, pool_size=5)
+Session = sessionmaker(bind=engine)
+
+session = Session()
+
+# 查询
+cursor = session.execute('select * from userinfo')
+result = cursor.fetchall()
+
+print(result)
+
+# 添加
+# cursor = session.execute('insert into userinfo(name,email) values(:name,:email)',params={"name":'xxrr','email':'xxrr@qq.com'})
+# session.commit()
+# print(cursor.lastrowid)
+
+session.close()
 ```
 
 ### 3.3 ORM操作数据库
 
+创建数据库表
+
+```
+# models.py
+
+import datetime
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, UniqueConstraint, Index
+
+Base = declarative_base()
+
+##  单表创建 
+class UserInfo(Base):
+    __tablename__ = 'userinfo'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(32), index=True, nullable=False)
+    email = Column(String(32), unique=True)
+    ctime = Column(DateTime, default=datetime.datetime.now)
+    # extra = Column(Text, nullable=True)
+
+    __table_args__ = (
+        # UniqueConstraint('id', 'name', name='uix_id_name'),
+        Index('ix_id_name', 'name', 'email'),
+    )
+
+def init_db():
+    """
+    根据类创建数据库表
+    :return:
+    """
+    engine = create_engine(
+        'mysql+pymysql://root:qdf@192.168.1.6:3306/db1?charset=utf8',
+        max_overflow=0,  # 超过连接池大小外最多创建的连接
+        pool_size=5,  # 连接池大小
+        pool_timeout=30,  # 池中没有线程最多等待的时间，否则报错
+        pool_recycle=-1  # 多久之后对线程池中的线程进行一次连接的回收（重置）
+    )
+
+    Base.metadata.create_all(engine)
+
+
+def drop_db():
+    """
+    根据类删除数据库表
+    :return:
+    """
+    engine = create_engine(
+        'mysql+pymysql://root:qwer1011@192.168.1.6:3306/db1?charset=utf8',
+        max_overflow=0,  # 超过连接池大小外最多创建的连接
+        pool_size=5,  # 连接池大小
+        pool_timeout=30,  # 池中没有线程最多等待的时间，否则报错
+        pool_recycle=-1  # 多久之后对线程池中的线程进行一次连接的回收（重置）
+    )
+
+    Base.metadata.drop_all(engine)
+
+
+if __name__ == '__main__':
+    drop_db()
+    init_db()
+    
+# python models.py即可生成数据库，然后就可以利用ORM操作数据库了.
+```
 
 简单单表增删改查操作
 ```
@@ -74,7 +206,7 @@ from sqlalchemy import create_engine
 
 from  models import UserInfo
 
-engine = create_engine('mysql+pymysql://root:qwer1011@192.168.1.6:3306/db1?charset=utf8', max_overflow=0, pool_size=5)
+engine = create_engine('mysql+pymysql://root:qfg@192.168.1.6:3306/db1?charset=utf8', max_overflow=0, pool_size=5)
 SessionClass = sessionmaker(bind=engine)
 
 # 每次执行数据库操作时，都需要创建一个session
@@ -109,6 +241,52 @@ print('del',effect_row_num)
 # 关闭session
 session.close()
 ```
+
+包含M2M，FK的多表创建参考
+```
+# ##################### 一对多示例 #########################
+class PersonType(Base):
+    __tablename__ = 'persontype'
+    id = Column(Integer, primary_key=True)
+    caption = Column(String(50), default='普通用户')
+
+
+class Person(Base):
+    __tablename__ = 'person'
+    nid = Column(Integer, primary_key=True)
+    name = Column(String(32), index=True, nullable=True)
+    person_id = Column(Integer, ForeignKey("persontype.id"))
+
+    # 与生成表结构无关，仅用于查询方便
+    ptype = relationship("PersonType", backref='pers')
+
+
+# ##################### 多对多示例 #########################
+
+class Server2Group(Base):
+    __tablename__ = 'server2group'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    server_id = Column(Integer, ForeignKey('server.id'))
+    group_id = Column(Integer, ForeignKey('group.id'))
+
+
+class Group(Base):
+    __tablename__ = 'group'
+    id = Column(Integer, primary_key=True)
+    name = Column(String(64), unique=True, nullable=False)
+
+    # 与生成表结构无关，仅用于查询方便
+    servers = relationship('Server', secondary='server2group', backref='groups')
+
+
+class Server(Base):
+    __tablename__ = 'server'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    hostname = Column(String(64), unique=True, nullable=False)
+```
+
+
 
 四. 总结
 
