@@ -227,6 +227,10 @@ for row in result:
 # for row in result:
 #     print(row.id,row.name,row.email)
 
+result = session.query(UserInfo.id.label('sn'),UserInfo.name,UserInfo.email).all()
+for row in result:
+    print(row.sn,row.name,row.email)
+    
 # ############# 修改 #############
 effect_row_num = session.query(UserInfo).filter(UserInfo.id > 3).update({'name':'new_name',})
 session.commit()
