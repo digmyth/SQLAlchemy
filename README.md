@@ -242,7 +242,7 @@ print('del',effect_row_num)
 session.close()
 ```
 
-包含M2M，FK的多表创建参考
+包含M2M，FK的多表创建参考如下
 ```
 # ##################### 一对多示例 #########################
 class PersonType(Base):
