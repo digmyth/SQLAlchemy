@@ -173,7 +173,7 @@ db.session.remove()
 
 
 ### 三、总结
-*
-*
-*
+* 单表插入时没有commit不会得到id号
+* 高效插入就要用到relationship，第一个字段class Host,第二个字段是关联的第三张表名，第三个字段为反向关联时定义的字段
+* db=SQLAlchemy()封装了所有查询相关信息，session/engine/declarative_base等
 
