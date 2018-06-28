@@ -48,7 +48,7 @@ class Project(db.Model):
     name =  Column(String(32), unique=True)
     repository =  Column(String(128))
 
-    # hosts = relationship('Host',secondary='Project2Host',backref='Project')
+    # hosts = relationship('Host',secondary='project_2_host',backref='projects')
 
 class Project2Host(db.Model):
     """
