@@ -109,10 +109,12 @@ class DeployRecord(db.Model):
     status_id = Column(Integer, default=1)
 ```
 
-### 一、普通单表创建
+### 一、普通单表插入数据
+在没有使用relationship字段时直接插入表数据可能写起来复杂些，主要复杂在手动处理多表关系
 
 
 ### 二、relationship的一键插入
+在使用了relationship字段时插入数据代码写起来简单多了，SQLAlchemy内部自动处理多表关系
 
 
 ### 三、总结
