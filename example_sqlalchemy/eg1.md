@@ -157,11 +157,18 @@ with app.app_context():
 ```
 
 ### 二、relationship的一键插入
-在使用了relationship字段时插入数据代码写起来简单多了，SQLAlchemy内部自动处理多表关系,前提是
+在使用了relationship字段时插入数据代码写起来简单多了，SQLAlchemy内部自动处理多表关系
 
 ```
+pro1 = models.Project(title='川云二期',name='AK47',repository='git://xx.git')
+pro1.hosts = [models.Host(hostname='c1.com', port=80),models.Host(hostname='c2.com', port=80)]
 
-
+db.session.add(pro1)
+db.session.commit()
+s = db.session.query(models.Project2Host.host_id).all()
+a = db.session.query(models.Host.projects).all()
+print(s,a)
+db.session.remove()
 ```
 
 
