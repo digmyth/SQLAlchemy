@@ -1,5 +1,10 @@
 # example_sqlalchemy 完整示例学习
 
+创建连接数据库指定字符集，否则表设定字符集将不生效
+```
+CREATE DATABASE db1 DEFAULT CHARSET utf8 COLLATE utf8_general_ci;
+```
+
 当有如下表
 ```
 # models.py
@@ -109,12 +114,55 @@ class DeployRecord(db.Model):
     status_id = Column(Integer, default=1)
 ```
 
-### 一、普通单表插入数据
-在没有使用relationship字段时直接插入表数据可能写起来复杂些，主要复杂在手动处理多表关系
+创建表
+```
+from manage import app  # 这个导入其实是单例
+from pro_23 import db
 
+# app = create_app()  # 虽然生成新的实例，但是我们这里只用到了app的应用上下文，属静态配置，所以无关是不是新的实例或单例（都可以）
+
+with app.app_context():
+    db.drop_all()
+    db.create_all()
+```
+
+### 一、普通单表插入数据
+在没有使用relationship字段时直接插入表数据可能写起来复杂些，主要复杂在手动处理多表关系（不要关闭前一个表的db.seession会话）
+```
+# db_init.py
+from manage import app
+from pro_23 import db,models
+
+with app.app_context():
+    # obj1 = models.UserInfo(username='wxq', password='123', nickname='digmyth'),
+
+    obj1 = models.Host(hostname='c1.com', port=80)
+    obj2 = models.Host(hostname='c2.com', port=80)
+    obj3 = models.Project(title='川云二期',name='AK47',repository='git://xx.git')
+    db.session.add(obj1)
+    db.session.add(obj2)
+    db.session.add(obj3)
+    db.session.commit()
+    # db.session.remove()    # 不会关闭会话
+
+    # 在没有relationship的情况下需要先提交才能获得obj3.id
+    db.session.add_all([
+        models.Project2Host(host_id=obj1.id,project_id=obj3.id),
+        models.Project2Host(host_id=obj2.id,project_id=obj3.id),
+    ])
+    db.session.commit()
+    s = db.session.query(models.Project2Host.host_id).all()
+    print(s)
+    db.session.remove()
+```
 
 ### 二、relationship的一键插入
-在使用了relationship字段时插入数据代码写起来简单多了，SQLAlchemy内部自动处理多表关系
+在使用了relationship字段时插入数据代码写起来简单多了，SQLAlchemy内部自动处理多表关系,前提是
+
+```
+
+
+```
 
 
 ### 三、总结
