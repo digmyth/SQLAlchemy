@@ -171,8 +171,62 @@ print(s,a)
 db.session.remove()
 ```
 
+### 三、视图练习
 
-### 三、总结
+```
+from flask import Blueprint,render_template
+from pro_23 import db,models
+
+pr = Blueprint('pr',__name__)
+
+@pr.route("/project/list")
+def project_list():
+    pro_list = db.session.query(models.Project).all()
+    for row in pro_list:
+        # for i in row.hosts:
+            # print(i.hostname)
+        # 当没有用relationshiop跨表查询时，自己联表也可以查询，就是复杂些
+        #isouter=True= left join
+        hosts = db.session.query(models.Project2Host.host_id,models.Host.hostname).join(models.Host,models.Project2Host.host_id==models.Host.id,isouter=True).filter(models.Project2Host.project_id==row.id).all()
+
+        print(row.id,row.title,hosts)
+    return render_template('project_list.html',pro_list=pro_list)
+```
+
+示例代码： project_list.html 
+```
+<div class="container">
+    <h1>项目列表</h1>
+    <table class="table table-bordered table-hover">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>项目名称</th>
+                <th>描述</th>
+                <th>地址</th>
+                <th>关联主机</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in pro_list %}
+            <tr>
+                <td>{{ row.id }}</td>
+                <td>{{ row.title }}</td>
+                <td>{{ row.name }}</td>
+                <td>{{ row.repository }}</td>
+                <td>
+                    {% for i in row.hosts %}
+                        <span>{{ i.hostname }}</span>
+                    {% endfor %}
+                </td>
+            </tr>
+            {% endfor%}
+        </tbody>
+    </table>
+</div>
+```
+
+### 四、总结
 * 单表插入时没有commit不会得到id号
 * 高效插入就要用到relationship
 * 第一个字段class Host,第二个字段是关联的第三张表名，第三个字段为反向关联时定义的字段
