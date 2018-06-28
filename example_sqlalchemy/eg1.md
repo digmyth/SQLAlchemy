@@ -143,7 +143,7 @@ with app.app_context():
     db.session.add(obj2)
     db.session.add(obj3)
     db.session.commit()
-    # db.session.remove()    # 不会关闭会话
+    # db.session.remove()    # 不要关闭会话
 
     # 在没有relationship的情况下需要先提交才能获得obj3.id
     db.session.add_all([
